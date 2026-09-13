@@ -32,8 +32,12 @@ export function CanvasPreview({ steps, throughStep, highlightStep = null, classN
           <filter id={`${blurId}-soft`} x="-10%" y="-10%" width="120%" height="120%">
             <feGaussianBlur stdDeviation="0.5" />
           </filter>
+          <clipPath id={`${blurId}-clip`}>
+            <rect width={CANVAS_W} height={CANVAS_H} />
+          </clipPath>
         </defs>
         <rect width={CANVAS_W} height={CANVAS_H} fill="#f3efe4" />
+        <g clipPath={`url(#${blurId}-clip)`}>
         {layers.map((layer) => {
           const isNew = highlightStep !== null && layer.stepIndex === highlightStep
           return (
@@ -49,8 +53,7 @@ export function CanvasPreview({ steps, throughStep, highlightStep = null, classN
             </polygon>
           )
         })}
-        {/* canvas texture */}
-        <rect width={CANVAS_W} height={CANVAS_H} fill="url(#grain)" opacity="0.06" />
+        </g>
       </svg>
       <div className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-inset ring-black/10" />
     </div>
