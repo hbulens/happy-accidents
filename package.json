@@ -1,0 +1,47 @@
+{
+  "name": "happy-accidents",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --port 3000",
+    "build": "vite build",
+    "serve": "vite preview",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "@tailwindcss/vite": "^4.1.17",
+    "@tanstack/react-router": "1.168.23",
+    "@tanstack/react-start": "1.167.42",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.525.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "eslint": "^9.9.0",
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+    "eslint-plugin-react-refresh": "^0.4.9",
+    "globals": "^15.9.0",
+    "jsdom": "^29.0.2",
+    "nitro": "npm:nitro-nightly@3.0.1-20251113-100129-fde97b54",
+    "tailwindcss": "^4.1.17",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.0.1",
+    "vite": "^7.2.2",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.0.5"
+  }
+}

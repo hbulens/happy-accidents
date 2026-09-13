@@ -1,0 +1,13 @@
+node_modules
+dist
+.output
+.tanstack
+.vercel
+.nitro
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+src/routeTree.gen.ts
+coverage
