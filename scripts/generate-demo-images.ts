@@ -3,7 +3,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { DEMO_LESSON } from '../src/features/lessons/data/demo-lesson'
-import { paintFinal, paintSteps } from '../src/features/lessons/server/images'
+import { paintFinal, paintSteps, removeSignature } from '../src/features/lessons/server/images'
 
 const outDir = new URL('../public/demo/', import.meta.url)
 
@@ -17,6 +17,12 @@ let finalUrl: string
 if (existsSync(finalPath) && !process.argv.includes('--repaint')) {
   console.log('Reusing existing final.webp (pass --repaint to paint it again)')
   finalUrl = `data:image/webp;base64,${(await readFile(finalPath)).toString('base64')}`
+  if (process.argv.includes('--unsign')) {
+    console.log('Removing the signature…')
+    const clean = await removeSignature(finalUrl)
+    await writeFile(finalPath, dataUrlToBuffer(clean.dataUrl))
+    finalUrl = clean.url
+  }
 } else {
   console.log('Painting the finished picture…')
   const final = await paintFinal(DEMO_LESSON, null)

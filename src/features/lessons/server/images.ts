@@ -48,46 +48,75 @@ export async function paintFinal(lesson: LessonContent, photo: Photo | null): Pr
   }
   if (photo) input.input_images = [`data:${photo.mediaType};base64,${photo.data}`]
   const url = firstUrl(await runModel(PAINT_MODEL, input))
+  try {
+    return await removeSignature(url)
+  } catch {
+    return { url, dataUrl: await fetchAsDataUrl(url) }
+  }
+}
+
+const CONCURRENCY = Math.max(1, Number(process.env.HAPPY_ACCIDENTS_IMAGE_CONCURRENCY) || 1)
+
+/** Kontext removes a fake signature far more reliably than a prompt prevents one. */
+export async function removeSignature(finalUrl: string): Promise<{ url: string; dataUrl: string }> {
+  const url = firstUrl(
+    await runModel(EDIT_MODEL, {
+      prompt:
+        'Remove any signature, initials, lettering or text from this oil painting, filling the area with the surrounding paint. Change nothing else.',
+      input_image: finalUrl,
+      aspect_ratio: 'match_input_image',
+      output_format: 'jpg',
+      safety_tolerance: 2,
+    }),
+  )
   return { url, dataUrl: await fetchAsDataUrl(url) }
 }
 
 /**
- * Walk backwards from the finished painting: each step picture is the next
- * step's picture with that step's additions removed. Edit models are far more
- * reliable at "remove X" than at "show an earlier stage", and chaining keeps
- * every picture consistent with the one after it. Pictures therefore arrive
- * last step first.
+ * Every step picture is made from the finished painting by removing what all
+ * the later steps add. Editing from the same source keeps everything that
+ * remains identical across the sequence; chaining edits drifted. Edit models
+ * remove reliably but cannot imagine "an earlier stage", so the prompt is a
+ * removal list plus a statement of what remains.
  */
+export function stepPrompt(lesson: LessonContent, index: number): string {
+  const later = lesson.steps.slice(index + 1).map((s) => s.paintsIn)
+  const remaining = lesson.steps[index]
+  return (
+    `Remove the following from this oil painting: ${later.join('; ')}. ` +
+    `Where they were, show only what was painted underneath. After the change the painting shows exactly this and nothing more: ${remaining.canvasAfter} ` +
+    `Any area described as bare or unpainted is smooth white primed canvas with a thin coat of Liquid White. ` +
+    `Keep everything that remains exactly as it is: same composition, same brushwork, same colours. No signature, no text.`
+  )
+}
+
 export async function paintSteps(
   finalUrl: string,
   lesson: LessonContent,
   onImage: (e: ImageEvent) => void,
   onError: (e: ImageStatus) => void,
 ): Promise<void> {
-  let currentUrl = finalUrl
-  for (let i = lesson.steps.length - 2; i >= 0; i--) {
-    const removed = lesson.steps[i + 1]
-    const remaining = lesson.steps[i]
-    const prompt =
-      `Remove ${removed.paintsIn} from this oil painting. ` +
-      `Where it was, show only what was painted underneath. After the change the painting shows exactly this and nothing more: ${remaining.canvasAfter} ` +
-      `Any area described as bare or unpainted is smooth white primed canvas with a thin coat of Liquid White. ` +
-      `Keep everything that remains exactly as it is: same composition, same brushwork, same colours. No signature, no text.`
-    try {
-      const url = firstUrl(
-        await runModel(EDIT_MODEL, {
-          prompt,
-          input_image: currentUrl,
-          aspect_ratio: 'match_input_image',
-          output_format: 'jpg',
-          safety_tolerance: 2,
-        }),
-      )
-      currentUrl = url
-      onImage({ kind: 'step', index: i, dataUrl: await fetchAsDataUrl(url) })
-    } catch (e) {
-      onError({ kind: 'step', index: i, error: e instanceof Error ? e.message : String(e) })
-      return // the chain cannot continue without this picture
+  // Early steps are the emptiest and the most useful to see first.
+  const indices = lesson.steps.map((_, i) => i).filter((i) => i !== lesson.steps.length - 1)
+  let next = 0
+  const worker = async () => {
+    while (next < indices.length) {
+      const i = indices[next++]
+      try {
+        const url = firstUrl(
+          await runModel(EDIT_MODEL, {
+            prompt: stepPrompt(lesson, i),
+            input_image: finalUrl,
+            aspect_ratio: 'match_input_image',
+            output_format: 'jpg',
+            safety_tolerance: 2,
+          }),
+        )
+        onImage({ kind: 'step', index: i, dataUrl: await fetchAsDataUrl(url) })
+      } catch (e) {
+        onError({ kind: 'step', index: i, error: e instanceof Error ? e.message : String(e) })
+      }
     }
   }
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, indices.length) }, worker))
 }
