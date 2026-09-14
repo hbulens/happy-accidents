@@ -36,7 +36,7 @@ export function GenerationProgress({ state, startedAt }: { state: GenerationProg
         <PaintSmear color={SMEAR_COLORS[state.steps.length % SMEAR_COLORS.length]} className="mt-6 h-9 w-full max-w-sm" animate />
         <p className="font-display-text mt-8 text-lg text-ink-soft">“{WAITING_QUOTES[q]}”</p>
         <p className="mt-8 text-sm tabular-nums text-ink-faint">
-          {mm}:{ss} elapsed · the text takes two to three minutes, then the canvas is painted layer by layer
+          {mm}:{ss} elapsed · the text takes two to three minutes, then the finished picture is painted and revealed step by step
         </p>
       </div>
 

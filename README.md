@@ -4,7 +4,7 @@ Step-by-step wet-on-wet oil painting lessons in the spirit of *The Joy of Painti
 
 ## Stack
 
-TanStack Start (React 19, Vite 7, Nitro), Tailwind v4, zustand, zod, the Anthropic SDK (Claude Opus 5 with structured outputs) for the lesson text, and Replicate (Flux Kontext Pro) for the pictures. Package manager: bun.
+TanStack Start (React 19, Vite 7, Nitro), Tailwind v4, zustand, zod, the Anthropic SDK (Claude Opus 5 with structured outputs) for the lesson text, and Replicate (Flux 2 Pro, with Flux Kontext Pro for a signature-removal pass) for the pictures. Package manager: bun.
 
 ## Run it
 
@@ -42,11 +42,11 @@ Keyboard: left and right arrows move between steps, space repeats or hushes.
 
 `POST /api/lessons` streams Server-Sent Events. First Claude writes the lesson: the request (prompt, or the resized photo as base64) goes in with a system prompt that encodes the wet-on-wet method: materials, the 13-colour palette, brush and knife techniques, order of operations, and the instructor voice. The response is constrained with a zod schema via structured outputs (`src/features/lessons/schema.ts`). Step titles are reported as they stream so the waiting screen shows real progress.
 
-Then the pictures, layer upon layer. Starting from a blank primed canvas, Flux Kontext Pro is asked to add one step's paint per call. Only the pixels that actually changed are composited back onto the canvas (a cleaned difference mask), so everything already painted stays pixel-identical from one step to the next, and the finished painting is simply the canvas after the last step. Compositing runs in pure JavaScript on the server. Images stream to the browser as data URLs and are stored in IndexedDB; lesson text lives in localStorage. The lesson page opens as soon as the finished picture is in and the step pictures keep arriving in the background.
+Then the pictures, with no reimagining. Flux 2 Pro paints the finished picture once from the lesson's painting prompt (using your photo as a reference in photo mode). Claude then looks at that picture, with a coordinate grid drawn over it, and outlines the area each step paints. The server reveals the finished painting step by step: each picture shows it only inside the regions painted so far and bare primed canvas everywhere else, so every picture is exactly the previous one plus new paint. Compositing is pure JavaScript. Where a later object covers an earlier layer, that patch stays bare canvas until its step. Images stream to the browser as data URLs and are stored in IndexedDB; lesson text lives in localStorage. The lesson page opens as soon as the finished picture is in and the step pictures keep arriving in the background.
 
 `POST /api/ask` answers mid-lesson questions with the current step as context.
 
-Set `HAPPY_ACCIDENTS_EFFORT` (`low` to `max`) to trade lesson quality for speed, and `HAPPY_ACCIDENTS_EDIT_MODEL` to swap the Replicate edit model.
+Set `HAPPY_ACCIDENTS_EFFORT` (`low` to `max`) to trade lesson quality for speed, and `HAPPY_ACCIDENTS_PAINT_MODEL` / `HAPPY_ACCIDENTS_EDIT_MODEL` to swap Replicate models.
 
 ## Layout
 

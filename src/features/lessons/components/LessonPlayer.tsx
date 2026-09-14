@@ -257,7 +257,7 @@ export function LessonPlayer({ lesson }: Props) {
                 src={stepImage}
                 alt={`The canvas after step ${stepIndex + 1}`}
                 pending={generating}
-                note={imageError ?? (generating ? 'Painting up to this step…' : undefined)}
+                note={imageError ?? (generating ? 'Painting…' : undefined)}
                 className="aspect-[4/3]"
               />
             )}

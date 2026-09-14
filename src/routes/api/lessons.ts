@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { GenerateRequestSchema } from '@/features/lessons/schema'
 import { generateLesson, LessonGenerationError, type GenerationProgress } from '@/features/lessons/server/generate-lesson'
-import { paintLayers } from '@/features/lessons/server/images'
+import { paintLesson } from '@/features/lessons/server/images'
 import { hasAnthropicKey } from '@/lib/anthropic'
 import { hasReplicateToken } from '@/lib/replicate'
 import { errorResponse } from '@/lib/http'
@@ -12,7 +12,7 @@ import { errorResponse } from '@/lib/http'
  * Returns a Server-Sent Events stream:
  *   progress    GenerationProgress            (while the lesson text streams)
  *   lesson      LessonContent                 (the text is complete)
- *   image       { kind:'step'|'final', index, dataUrl }   (layer by layer, in order)
+ *   image       { kind:'final'|'step', index, dataUrl }   (the finished picture first, then each step)
  *   image-error { kind, index, error }
  *   done        { images: boolean }
  *   error       { message, status }           (fatal; the lesson could not be made)
@@ -52,11 +52,12 @@ async function handler({ request }: { request: Request }): Promise<Response> {
           return
         }
 
-        send('progress', { type: 'status', phase: 'painting', message: 'Painting the canvas, layer by layer' })
-        await paintLayers(
+        await paintLesson(
           lesson,
+          req.mode === 'photo' ? req.image : null,
           (img) => send('image', img),
           (err) => send('image-error', err),
+          (message) => send('progress', { type: 'status', phase: 'painting', message }),
         )
         send('done', { images: true })
       } catch (error) {

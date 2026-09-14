@@ -189,3 +189,34 @@ export function cleanMask(mask: Float32Array, width: number, height: number): Fl
   }
   return boxBlur(out, width, height, 2)
 }
+
+/** Draw a coordinate grid (lesson units, 0..100 x 0..75) over a copy of the image. */
+export function drawGrid(img: Raster, spacing = 10): Raster {
+  const out: Raster = { width: img.width, height: img.height, data: new Uint8Array(img.data) }
+  const line = (x0: number, y0: number, x1: number, y1: number, strong: boolean) => {
+    const steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))
+    for (let s = 0; s <= steps; s++) {
+      const x = Math.round(x0 + ((x1 - x0) * s) / steps)
+      const y = Math.round(y0 + ((y1 - y0) * s) / steps)
+      for (let t = 0; t < (strong ? 3 : 1); t++) {
+        const xx = x + (x1 === x0 ? t : 0)
+        const yy = y + (y1 === y0 ? t : 0)
+        if (xx < 0 || yy < 0 || xx >= out.width || yy >= out.height) continue
+        const i = (yy * out.width + xx) * 4
+        out.data[i] = strong ? 255 : 40
+        out.data[i + 1] = strong ? 40 : 40
+        out.data[i + 2] = strong ? 40 : 40
+      }
+    }
+  }
+  for (let gx = 0; gx <= 100; gx += spacing) line(Math.round((gx / 100) * (img.width - 1)), 0, Math.round((gx / 100) * (img.width - 1)), img.height - 1, gx % 50 === 0)
+  for (let gy = 0; gy <= 75; gy += spacing) line(0, Math.round((gy / 75) * (img.height - 1)), img.width - 1, Math.round((gy / 75) * (img.height - 1)), gy % 50 === 0)
+  return out
+}
+
+/** Element-wise maximum of two masks. */
+export function unionMask(a: Float32Array, b: Float32Array): Float32Array {
+  const out = new Float32Array(a.length)
+  for (let i = 0; i < a.length; i++) out[i] = a[i] > b[i] ? a[i] : b[i]
+  return out
+}

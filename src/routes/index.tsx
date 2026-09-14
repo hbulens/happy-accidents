@@ -22,7 +22,7 @@ function HomePage() {
           <PaintSmear color="#8f2033" className="mt-5 h-8 w-56" />
           <p className="font-display-text mt-6 max-w-xl text-xl leading-relaxed text-ink-soft">
             Describe a scene or hand over a photo. You get a complete lesson in the spirit of <em>The Joy of Painting</em>:
-            the palette, the brushes, what to do with them, and the canvas painted up layer by layer alongside yours. Read aloud, driven by
+            the palette, the brushes, what to do with them, and the finished painting revealed layer by layer alongside your canvas. Read aloud, driven by
             your voice, so your hands stay on the brush.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 text-sm text-ink-soft">
@@ -50,7 +50,7 @@ function HomePage() {
 
       <section className="mt-20 grid gap-5 sm:grid-cols-3">
         <Feature color="#1c3a5e" title="Layer upon layer">
-          The canvas is painted one step at a time, so each picture is the last one plus new paint, exactly like your easel.
+          The finished painting is revealed one step at a time, so each picture is exactly the last one plus new paint.
         </Feature>
         <Feature color="#4a6b33" title="Real technique">
           Criss-cross skies, broken knife highlights, tap-and-lift mist, and the far-to-near order that makes it work.

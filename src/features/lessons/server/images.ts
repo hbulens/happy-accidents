@@ -1,29 +1,35 @@
-// Builds the lesson's pictures layer upon layer. Starting from a blank primed
-// canvas, each step asks the edit model to add only that step's paint; the
-// result is composited back using a mask of the pixels that actually changed,
-// so everything already on the canvas stays pixel-identical. The finished
-// painting is simply the canvas after the last step.
+// Lesson pictures with no reimagining: the finished painting is made once,
+// then revealed step by step. Each step's picture shows the finished painting
+// only inside the regions painted so far and bare primed canvas elsewhere, so
+// every picture is exactly the previous one plus new paint.
 import type { LessonContent } from '@/features/lessons/schema'
 import { fetchAsDataUrl, firstUrl, runModel } from '@/lib/replicate'
 import {
-  cleanMask,
   composite,
   createCanvas,
   decodeJpeg,
-  diffMask,
+  drawGrid,
   encodeJpeg,
+  polygonMask,
   resize,
   toDataUrl,
+  unionMask,
   type Raster,
 } from '@/lib/raster'
+import { mapRegions, type Regions } from '@/features/lessons/server/regions'
 
+const PAINT_MODEL = process.env.HAPPY_ACCIDENTS_PAINT_MODEL ?? 'black-forest-labs/flux-2-pro'
 const EDIT_MODEL = process.env.HAPPY_ACCIDENTS_EDIT_MODEL ?? 'black-forest-labs/flux-kontext-pro'
 export const CANVAS_W = 1024
 export const CANVAS_H = 768
 const CANVAS_COLOR = '#f4efe3'
+const FEATHER = 5
 
-export const STYLE_NOTE =
-  'painted wet-on-wet in oils in the style of a public-television landscape painting show: soft blended skies, palette-knife mountains with broken highlights, fan-brush evergreens, thick impasto and visible bristle texture'
+export const STYLE_PROMPT =
+  'A finished wet-on-wet oil painting on canvas in the style of Bob Ross and The Joy of Painting: ' +
+  'softly blended sky, palette-knife mountains with broken white highlights, fan-brush evergreen trees, ' +
+  'reflections pulled straight down into still water, thick knife impasto and visible bristle texture, ' +
+  'gentle warm light, calm and inviting. Only the painting itself fills the frame, unsigned, with the whole canvas painted edge to edge.'
 
 export interface ImageEvent {
   kind: 'final' | 'step'
@@ -37,62 +43,95 @@ export interface ImageStatus {
   error: string
 }
 
-/** The instruction for one layer. Positive phrasing only: negations backfire. */
-export function layerPrompt(lesson: LessonContent, index: number): string {
-  const step = lesson.steps[index]
-  return (
-    `Add ${step.paintsIn}, ${STYLE_NOTE}. ` +
-    `Paint it directly onto this canvas as the next layer of the painting in progress. ` +
-    `Keep everything already on the canvas exactly as it is, including any bare white areas that this layer does not cover.`
-  )
+interface Photo {
+  mediaType: string
+  data: string
 }
 
-export function blankCanvas(): Raster {
-  return createCanvas(CANVAS_W, CANVAS_H, CANVAS_COLOR)
-}
-
-/** Ask the edit model to add one layer and return the changed pixels composited onto the canvas. */
-export async function addLayer(canvas: Raster, prompt: string): Promise<Raster> {
-  const url = firstUrl(
-    await runModel(EDIT_MODEL, {
-      prompt,
-      input_image: toDataUrl(encodeJpeg(canvas, 90)),
-      aspect_ratio: 'match_input_image',
-      output_format: 'jpg',
-      safety_tolerance: 2,
-    }),
-  )
-  const edit = resize(decodeJpeg(dataUrlBytes(await fetchAsDataUrl(url))), canvas.width, canvas.height)
-  const alpha = cleanMask(diffMask(canvas, edit, null, 22, 70, 0), canvas.width, canvas.height)
-  return composite(canvas, edit, alpha)
+/** Paint the finished picture (with the photo as reference in photo mode) and strip any signature. */
+export async function paintFinal(lesson: LessonContent, photo: Photo | null): Promise<Raster> {
+  const prompt = photo
+    ? `${STYLE_PROMPT} Repaint the reference photo as this painting, simplified into big soft shapes: ${lesson.paintingPrompt}`
+    : `${STYLE_PROMPT} The scene: ${lesson.paintingPrompt}`
+  const input: Record<string, unknown> = {
+    prompt,
+    aspect_ratio: '4:3',
+    resolution: '1 MP',
+    output_format: 'jpg',
+    output_quality: 92,
+    safety_tolerance: 2,
+  }
+  if (photo) input.input_images = [`data:${photo.mediaType};base64,${photo.data}`]
+  let url = firstUrl(await runModel(PAINT_MODEL, input))
+  try {
+    url = firstUrl(
+      await runModel(EDIT_MODEL, {
+        prompt: 'Remove any signature, initials, lettering or text from this oil painting, filling the area with the surrounding paint. Change nothing else.',
+        input_image: url,
+        aspect_ratio: 'match_input_image',
+        output_format: 'jpg',
+        safety_tolerance: 2,
+      }),
+    )
+  } catch {
+    /* keep the signed version rather than fail */
+  }
+  return resize(decodeJpeg(dataUrlBytes(await fetchAsDataUrl(url))), CANVAS_W, CANVAS_H)
 }
 
 function dataUrlBytes(dataUrl: string): Uint8Array {
   return new Uint8Array(Buffer.from(dataUrl.split(',')[1] ?? '', 'base64'))
 }
 
+/** Ask Claude to outline what each step paints on the finished picture. */
+export async function regionsFor(lesson: LessonContent, final: Raster): Promise<Regions> {
+  const grid = encodeJpeg(drawGrid(final), 88)
+  return mapRegions(lesson, Buffer.from(grid).toString('base64'))
+}
+
 /**
- * Paint every step in order. The prep step is the blank canvas. Emits a
- * picture per step as it lands and the finished painting at the end. If a
- * layer fails, that step reuses the previous picture and the build goes on.
+ * Reveal the finished painting step by step. Pure compositing, no model
+ * calls: pictures follow within seconds of the final.
  */
-export async function paintLayers(
-  lesson: LessonContent,
-  onImage: (e: ImageEvent) => void,
-  onError: (e: ImageStatus) => void,
-): Promise<void> {
-  let canvas = blankCanvas()
+export function revealSteps(lesson: LessonContent, final: Raster, regions: Regions, onImage: (e: ImageEvent) => void): void {
+  const blank = createCanvas(CANVAS_W, CANVAS_H, CANVAS_COLOR)
+  let shown: Float32Array = new Float32Array(CANVAS_W * CANVAS_H)
   const n = lesson.steps.length
   for (let i = 0; i < n; i++) {
-    const step = lesson.steps[i]
-    if (step.phase !== 'prep') {
-      try {
-        canvas = await addLayer(canvas, layerPrompt(lesson, i))
-      } catch (e) {
-        onError({ kind: 'step', index: i, error: e instanceof Error ? e.message : String(e) })
-      }
-    }
-    onImage({ kind: 'step', index: i, dataUrl: toDataUrl(encodeJpeg(canvas, 88)) })
+    const polys = regions.steps[i]?.polygons.map((p) => p.points) ?? []
+    if (polys.length) shown = unionMask(shown, polygonMask(polys, CANVAS_W, CANVAS_H, FEATHER))
+    const picture = i === n - 1 ? final : composite(blank, final, shown)
+    onImage({ kind: 'step', index: i, dataUrl: toDataUrl(encodeJpeg(picture, 88)) })
   }
-  onImage({ kind: 'final', index: n - 1, dataUrl: toDataUrl(encodeJpeg(canvas, 90)) })
+  onImage({ kind: 'final', index: n - 1, dataUrl: toDataUrl(encodeJpeg(final, 90)) })
+}
+
+/** The whole picture pipeline for one lesson. */
+export async function paintLesson(
+  lesson: LessonContent,
+  photo: Photo | null,
+  onImage: (e: ImageEvent) => void,
+  onError: (e: ImageStatus) => void,
+  onStatus: (message: string) => void,
+): Promise<void> {
+  onStatus('Painting the finished picture')
+  let final: Raster
+  try {
+    final = await paintFinal(lesson, photo)
+  } catch (e) {
+    onError({ kind: 'final', index: -1, error: e instanceof Error ? e.message : String(e) })
+    return
+  }
+  onImage({ kind: 'final', index: lesson.steps.length - 1, dataUrl: toDataUrl(encodeJpeg(final, 90)) })
+
+  onStatus('Mapping each step onto the picture')
+  let regions: Regions
+  try {
+    regions = await regionsFor(lesson, final)
+  } catch (e) {
+    onError({ kind: 'step', index: -1, error: e instanceof Error ? e.message : String(e) })
+    return
+  }
+  onStatus('Revealing the canvas step by step')
+  revealSteps(lesson, final, regions, onImage)
 }
