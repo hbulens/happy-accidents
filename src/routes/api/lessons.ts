@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { GenerateRequestSchema } from '@/features/lessons/schema'
 import { generateLesson, LessonGenerationError, type GenerationProgress } from '@/features/lessons/server/generate-lesson'
-import { paintFinal, paintSteps } from '@/features/lessons/server/images'
+import { paintLayers } from '@/features/lessons/server/images'
 import { hasAnthropicKey } from '@/lib/anthropic'
 import { hasReplicateToken } from '@/lib/replicate'
 import { errorResponse } from '@/lib/http'
@@ -10,12 +10,12 @@ import { errorResponse } from '@/lib/http'
  * POST /api/lessons
  * Body: GenerateRequest ({ mode: 'imagine', prompt } | { mode: 'photo', note, image })
  * Returns a Server-Sent Events stream:
- *   progress   GenerationProgress            (while the lesson text streams)
- *   lesson     LessonContent                 (the text is complete)
- *   image      { kind:'final'|'step', index, dataUrl }
- *   image-error{ kind, index, error }
- *   done       { images: boolean }
- *   error      { message, status }           (fatal; the lesson could not be made)
+ *   progress    GenerationProgress            (while the lesson text streams)
+ *   lesson      LessonContent                 (the text is complete)
+ *   image       { kind:'step'|'final', index, dataUrl }   (layer by layer, in order)
+ *   image-error { kind, index, error }
+ *   done        { images: boolean }
+ *   error       { message, status }           (fatal; the lesson could not be made)
  */
 async function handler({ request }: { request: Request }): Promise<Response> {
   if (!hasAnthropicKey()) {
@@ -32,23 +32,16 @@ async function handler({ request }: { request: Request }): Promise<Response> {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       let closed = false
-      const send = (event: string, data: unknown) => {
+      const write = (text: string) => {
         if (closed) return
         try {
-          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+          controller.enqueue(encoder.encode(text))
         } catch {
           closed = true
         }
       }
-      const heartbeat = setInterval(() => {
-        if (!closed) {
-          try {
-            controller.enqueue(encoder.encode(': ping\n\n'))
-          } catch {
-            closed = true
-          }
-        }
-      }, 15000)
+      const send = (event: string, data: unknown) => write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+      const heartbeat = setInterval(() => write(': ping\n\n'), 15000)
       try {
         const lesson = await generateLesson(req, (p: GenerationProgress) => send('progress', p))
         send('lesson', lesson)
@@ -59,20 +52,8 @@ async function handler({ request }: { request: Request }): Promise<Response> {
           return
         }
 
-        send('progress', { type: 'status', phase: 'painting', message: 'Painting the finished picture' })
-        let final: { url: string; dataUrl: string }
-        try {
-          final = await paintFinal(lesson, req.mode === 'photo' ? req.image : null)
-        } catch (e) {
-          send('image-error', { kind: 'final', index: -1, error: e instanceof Error ? e.message : String(e) })
-          send('done', { images: false })
-          return
-        }
-        send('image', { kind: 'final', index: lesson.steps.length - 1, dataUrl: final.dataUrl })
-
-        send('progress', { type: 'status', phase: 'painting', message: 'Painting each step' })
-        await paintSteps(
-          final.url,
+        send('progress', { type: 'status', phase: 'painting', message: 'Painting the canvas, layer by layer' })
+        await paintLayers(
           lesson,
           (img) => send('image', img),
           (err) => send('image-error', err),

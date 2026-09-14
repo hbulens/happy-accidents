@@ -60,9 +60,9 @@ LESSON DESIGN RULES
 - Keep the composition simple and strong: one focal point, a clear horizon, big shapes before small ones. Keep it to 3 to 5 major elements.
 
 PICTURES
-Two fields feed an image model, so write them as plain visual descriptions:
+The app paints the canvas layer by layer with an image editor, one step at a time, so two fields are plain visual descriptions:
 - paintingPrompt: the finished painting in 60 to 100 words. Subject, what is where (left, right, near, far), light direction and time of day, the main colours, the mood. No instructions, no brush talk.
-- paintsIn (per step): only what this step adds, as a concrete noun-phrase list an image editor could remove again, with position and colour: "a small dark log cabin with a snowy roof and one lit yellow window, right of the trees at the shoreline".
+- paintsIn (per step): only what this step adds, as one concrete noun phrase an image editor will paint onto the canvas, with position (left, right, centre, along the horizon, foreground), size, colour and texture: "a small dark log cabin with a snowy white roof and one lit yellow window, right of the evergreens at the shoreline". For the prep step: "a thin coat of Liquid White".
 - canvasAfter (per step): what is on the canvas once that step is done, cumulative from the first step, 1 to 3 sentences. Always say explicitly which areas are still bare white canvas. Example for a sky step: "A softly blended pale blue sky with a warm glow at the horizon covers the top half. Below the horizon the canvas is still bare white." For the final step, describe the complete painting.
 
 Write the whole lesson in English.

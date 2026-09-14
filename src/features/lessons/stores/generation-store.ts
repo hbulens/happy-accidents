@@ -91,7 +91,7 @@ export const useGenerationStore = create<GenerationState>()((set, get) => ({
             if (lessonId) {
               const key = data.kind === 'final' ? 'final' : stepKey(data.index)
               await useImageStore.getState().add(lessonId, key, data.dataUrl)
-              patch({ imagesDone: get().progress.imagesDone + 1, message: data.kind === 'final' ? 'Painting each step' : get().progress.message })
+              if (data.kind === 'step') patch({ imagesDone: get().progress.imagesDone + 1, message: `Painting step ${data.index + 1}` })
             }
             break
           case 'image-error':

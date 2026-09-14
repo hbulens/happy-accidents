@@ -1,17 +1,29 @@
-// Turns a generated lesson into pictures: one finished painting, then one
-// "after this step" image per step, edited from the finished painting so the
-// composition and colours stay consistent across the sequence.
+// Builds the lesson's pictures layer upon layer. Starting from a blank primed
+// canvas, each step asks the edit model to add only that step's paint; the
+// result is composited back using a mask of the pixels that actually changed,
+// so everything already on the canvas stays pixel-identical. The finished
+// painting is simply the canvas after the last step.
 import type { LessonContent } from '@/features/lessons/schema'
 import { fetchAsDataUrl, firstUrl, runModel } from '@/lib/replicate'
+import {
+  cleanMask,
+  composite,
+  createCanvas,
+  decodeJpeg,
+  diffMask,
+  encodeJpeg,
+  resize,
+  toDataUrl,
+  type Raster,
+} from '@/lib/raster'
 
-const PAINT_MODEL = process.env.HAPPY_ACCIDENTS_PAINT_MODEL ?? 'black-forest-labs/flux-2-pro'
 const EDIT_MODEL = process.env.HAPPY_ACCIDENTS_EDIT_MODEL ?? 'black-forest-labs/flux-kontext-pro'
+export const CANVAS_W = 1024
+export const CANVAS_H = 768
+const CANVAS_COLOR = '#f4efe3'
 
-export const STYLE_PROMPT =
-  'A finished wet-on-wet oil painting on canvas in the style of Bob Ross and The Joy of Painting: ' +
-  'softly blended sky, palette-knife mountains with broken white highlights, fan-brush evergreen trees, ' +
-  'reflections pulled straight down into still water, thick knife impasto and visible bristle texture, ' +
-  'gentle warm light, calm and inviting. Only the painting itself fills the frame, no frame, no easel, no people, no text, no signature, unsigned.'
+export const STYLE_NOTE =
+  'painted wet-on-wet in oils in the style of a public-television landscape painting show: soft blended skies, palette-knife mountains with broken highlights, fan-brush evergreens, thick impasto and visible bristle texture'
 
 export interface ImageEvent {
   kind: 'final' | 'step'
@@ -25,100 +37,62 @@ export interface ImageStatus {
   error: string
 }
 
-interface Photo {
-  mediaType: string
-  data: string
+/** The instruction for one layer. Positive phrasing only: negations backfire. */
+export function layerPrompt(lesson: LessonContent, index: number): string {
+  const step = lesson.steps[index]
+  return (
+    `Add ${step.paintsIn}, ${STYLE_NOTE}. ` +
+    `Paint it directly onto this canvas as the next layer of the painting in progress. ` +
+    `Keep everything already on the canvas exactly as it is, including any bare white areas that this layer does not cover.`
+  )
 }
 
-/**
- * Paint the finished picture. With a photo, the model uses it as a reference
- * and translates it into the painting described by the lesson.
- */
-export async function paintFinal(lesson: LessonContent, photo: Photo | null): Promise<{ url: string; dataUrl: string }> {
-  const prompt = photo
-    ? `${STYLE_PROMPT} Repaint the reference photo as this painting, simplified into big soft shapes: ${lesson.paintingPrompt}`
-    : `${STYLE_PROMPT} The scene: ${lesson.paintingPrompt}`
-  const input: Record<string, unknown> = {
-    prompt,
-    aspect_ratio: '4:3',
-    resolution: '1 MP',
-    output_format: 'webp',
-    output_quality: 85,
-    safety_tolerance: 2,
-  }
-  if (photo) input.input_images = [`data:${photo.mediaType};base64,${photo.data}`]
-  const url = firstUrl(await runModel(PAINT_MODEL, input))
-  try {
-    return await removeSignature(url)
-  } catch {
-    return { url, dataUrl: await fetchAsDataUrl(url) }
-  }
+export function blankCanvas(): Raster {
+  return createCanvas(CANVAS_W, CANVAS_H, CANVAS_COLOR)
 }
 
-/** Kontext removes a fake signature far more reliably than a prompt prevents one. */
-export async function removeSignature(finalUrl: string): Promise<{ url: string; dataUrl: string }> {
+/** Ask the edit model to add one layer and return the changed pixels composited onto the canvas. */
+export async function addLayer(canvas: Raster, prompt: string): Promise<Raster> {
   const url = firstUrl(
     await runModel(EDIT_MODEL, {
-      prompt:
-        'Remove any signature, initials, lettering or text from this oil painting, filling the area with the surrounding paint. Change nothing else.',
-      input_image: finalUrl,
+      prompt,
+      input_image: toDataUrl(encodeJpeg(canvas, 90)),
       aspect_ratio: 'match_input_image',
       output_format: 'jpg',
       safety_tolerance: 2,
     }),
   )
-  return { url, dataUrl: await fetchAsDataUrl(url) }
+  const edit = resize(decodeJpeg(dataUrlBytes(await fetchAsDataUrl(url))), canvas.width, canvas.height)
+  const alpha = cleanMask(diffMask(canvas, edit, null, 22, 70, 0), canvas.width, canvas.height)
+  return composite(canvas, edit, alpha)
 }
 
-/** Steps per anchor hop. Kontext follows short removal lists well and repaints the scene for long ones. */
-const BATCH = 3
-
-/** Removal instruction: what to take out, what remains. Negations backfire, so none. */
-export function stepPrompt(lesson: LessonContent, index: number, throughIndex: number): string {
-  const removed = lesson.steps.slice(index + 1, throughIndex + 1).map((s) => s.paintsIn)
-  const remaining = lesson.steps[index]
-  return (
-    `Remove ${removed.join('; and ')}; and any signature, initials or lettering from this oil painting. ` +
-    `Where they were, show only what was painted underneath, and any area that was never painted is smooth white primed canvas. ` +
-    `What remains on the canvas: ${remaining.canvasAfter} ` +
-    `Keep everything that remains exactly as it is: same composition, same brushwork, same colours.`
-  )
+function dataUrlBytes(dataUrl: string): Uint8Array {
+  return new Uint8Array(Buffer.from(dataUrl.split(',')[1] ?? '', 'base64'))
 }
 
 /**
- * Walk backwards from the finished painting in short hops. Every picture
- * removes at most BATCH steps' additions from the nearest later anchor, and
- * the earliest picture of each hop becomes the next anchor. Short removal
- * lists keep Kontext faithful; few hops keep drift small.
+ * Paint every step in order. The prep step is the blank canvas. Emits a
+ * picture per step as it lands and the finished painting at the end. If a
+ * layer fails, that step reuses the previous picture and the build goes on.
  */
-export async function paintSteps(
-  finalUrl: string,
+export async function paintLayers(
   lesson: LessonContent,
   onImage: (e: ImageEvent) => void,
   onError: (e: ImageStatus) => void,
 ): Promise<void> {
-  let anchorIdx = lesson.steps.length - 1
-  let anchorUrl = finalUrl
-  while (anchorIdx > 0) {
-    const nextAnchor = Math.max(0, anchorIdx - BATCH)
-    for (let i = anchorIdx - 1; i >= nextAnchor; i--) {
+  let canvas = blankCanvas()
+  const n = lesson.steps.length
+  for (let i = 0; i < n; i++) {
+    const step = lesson.steps[i]
+    if (step.phase !== 'prep') {
       try {
-        const url = firstUrl(
-          await runModel(EDIT_MODEL, {
-            prompt: stepPrompt(lesson, i, anchorIdx),
-            input_image: anchorUrl,
-            aspect_ratio: 'match_input_image',
-            output_format: 'jpg',
-            safety_tolerance: 2,
-          }),
-        )
-        onImage({ kind: 'step', index: i, dataUrl: await fetchAsDataUrl(url) })
-        if (i === nextAnchor) anchorUrl = url
+        canvas = await addLayer(canvas, layerPrompt(lesson, i))
       } catch (e) {
         onError({ kind: 'step', index: i, error: e instanceof Error ? e.message : String(e) })
-        if (i === nextAnchor) return // no anchor to continue from
       }
     }
-    anchorIdx = nextAnchor
+    onImage({ kind: 'step', index: i, dataUrl: toDataUrl(encodeJpeg(canvas, 88)) })
   }
+  onImage({ kind: 'final', index: n - 1, dataUrl: toDataUrl(encodeJpeg(canvas, 90)) })
 }

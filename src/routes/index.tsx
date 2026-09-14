@@ -22,7 +22,7 @@ function HomePage() {
           <PaintSmear color="#8f2033" className="mt-5 h-8 w-56" />
           <p className="font-display-text mt-6 max-w-xl text-xl leading-relaxed text-ink-soft">
             Describe a scene or hand over a photo. You get a complete lesson in the spirit of <em>The Joy of Painting</em>:
-            the palette, the brushes, what to do with them, and a picture of the canvas after every step. Read aloud, driven by
+            the palette, the brushes, what to do with them, and the canvas painted up layer by layer alongside yours. Read aloud, driven by
             your voice, so your hands stay on the brush.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 text-sm text-ink-soft">
@@ -35,7 +35,7 @@ function HomePage() {
 
         <figure className="mx-auto w-full max-w-lg lg:max-w-none">
           <div className="easel">
-            <Painting src="/demo/final.webp" alt={DEMO_LESSON.title} className="aspect-[4/3]" />
+            <Painting src="/demo/final.jpg" alt={DEMO_LESSON.title} className="aspect-[4/3]" />
           </div>
           <figcaption className="mt-4 flex items-baseline justify-between text-sm text-ink-soft">
             <span className="font-display-text text-base text-ink">{DEMO_LESSON.title}</span>
@@ -49,8 +49,8 @@ function HomePage() {
       </section>
 
       <section className="mt-20 grid gap-5 sm:grid-cols-3">
-        <Feature color="#1c3a5e" title="See every stage">
-          A picture of what your canvas should look like after each step, painted from the finished piece.
+        <Feature color="#1c3a5e" title="Layer upon layer">
+          The canvas is painted one step at a time, so each picture is the last one plus new paint, exactly like your easel.
         </Feature>
         <Feature color="#4a6b33" title="Real technique">
           Criss-cross skies, broken knife highlights, tap-and-lift mist, and the far-to-near order that makes it work.

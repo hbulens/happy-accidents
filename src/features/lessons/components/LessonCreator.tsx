@@ -27,8 +27,8 @@ export function LessonCreator() {
   // Hand over to the lesson page as soon as the finished picture is in, or as
   // soon as the text is done when no pictures are coming. Images keep
   // streaming in the background store.
-  const finalImage = useImageStore((s) => (generation.lessonId ? s.images[generation.lessonId]?.final : undefined))
-  const ready = Boolean(generation.lessonId) && (Boolean(finalImage) || !generation.running || Boolean(generation.progress.imageError))
+  const firstImage = useImageStore((s) => (generation.lessonId ? s.images[generation.lessonId]?.['step-0'] : undefined))
+  const ready = Boolean(generation.lessonId) && (Boolean(firstImage) || !generation.running || Boolean(generation.progress.imageError))
   const handedOff = useRef<string | null>(null)
   useEffect(() => {
     const id = generation.lessonId
