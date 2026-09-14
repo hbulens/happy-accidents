@@ -16,16 +16,12 @@ describe('replicate helpers', () => {
 })
 
 describe('stepPrompt', () => {
-  it('removes everything later steps add and states what remains', () => {
-    const p = stepPrompt(DEMO_LESSON, 1)
-    for (const step of DEMO_LESSON.steps.slice(2)) expect(p).toContain(step.paintsIn)
-    expect(p).not.toContain(DEMO_LESSON.steps[1].paintsIn)
-    expect(p).toContain(DEMO_LESSON.steps[1].canvasAfter)
-  })
-  it('for the penultimate step only removes the last step', () => {
-    const n = DEMO_LESSON.steps.length
-    const p = stepPrompt(DEMO_LESSON, n - 2)
-    expect(p).toContain(DEMO_LESSON.steps[n - 1].paintsIn)
-    expect(p).not.toContain(DEMO_LESSON.steps[n - 3].paintsIn)
+  it('removes only the steps between the picture and its anchor, and states what remains', () => {
+    const p = stepPrompt(DEMO_LESSON, 5, 8)
+    for (const step of DEMO_LESSON.steps.slice(6, 9)) expect(p).toContain(step.paintsIn)
+    expect(p).not.toContain(DEMO_LESSON.steps[9].paintsIn)
+    expect(p).not.toContain(DEMO_LESSON.steps[5].paintsIn)
+    expect(p).toContain(DEMO_LESSON.steps[5].canvasAfter)
+    expect(p).not.toMatch(/\bno signature\b/i)
   })
 })

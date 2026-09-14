@@ -55,8 +55,6 @@ export async function paintFinal(lesson: LessonContent, photo: Photo | null): Pr
   }
 }
 
-const CONCURRENCY = Math.max(1, Number(process.env.HAPPY_ACCIDENTS_IMAGE_CONCURRENCY) || 1)
-
 /** Kontext removes a fake signature far more reliably than a prompt prevents one. */
 export async function removeSignature(finalUrl: string): Promise<{ url: string; dataUrl: string }> {
   const url = firstUrl(
@@ -72,51 +70,55 @@ export async function removeSignature(finalUrl: string): Promise<{ url: string; 
   return { url, dataUrl: await fetchAsDataUrl(url) }
 }
 
-/**
- * Every step picture is made from the finished painting by removing what all
- * the later steps add. Editing from the same source keeps everything that
- * remains identical across the sequence; chaining edits drifted. Edit models
- * remove reliably but cannot imagine "an earlier stage", so the prompt is a
- * removal list plus a statement of what remains.
- */
-export function stepPrompt(lesson: LessonContent, index: number): string {
-  const later = lesson.steps.slice(index + 1).map((s) => s.paintsIn)
+/** Steps per anchor hop. Kontext follows short removal lists well and repaints the scene for long ones. */
+const BATCH = 3
+
+/** Removal instruction: what to take out, what remains. Negations backfire, so none. */
+export function stepPrompt(lesson: LessonContent, index: number, throughIndex: number): string {
+  const removed = lesson.steps.slice(index + 1, throughIndex + 1).map((s) => s.paintsIn)
   const remaining = lesson.steps[index]
   return (
-    `Remove the following from this oil painting: ${later.join('; ')}. ` +
-    `Where they were, show only what was painted underneath. After the change the painting shows exactly this and nothing more: ${remaining.canvasAfter} ` +
-    `Any area described as bare or unpainted is smooth white primed canvas with a thin coat of Liquid White. ` +
-    `Keep everything that remains exactly as it is: same composition, same brushwork, same colours. No signature, no text.`
+    `Remove ${removed.join('; and ')} from this oil painting. ` +
+    `Where they were, show only what was painted underneath, and any area that was never painted is smooth white primed canvas. ` +
+    `What remains on the canvas: ${remaining.canvasAfter} ` +
+    `Keep everything that remains exactly as it is: same composition, same brushwork, same colours.`
   )
 }
 
+/**
+ * Walk backwards from the finished painting in short hops. Every picture
+ * removes at most BATCH steps' additions from the nearest later anchor, and
+ * the earliest picture of each hop becomes the next anchor. Short removal
+ * lists keep Kontext faithful; few hops keep drift small.
+ */
 export async function paintSteps(
   finalUrl: string,
   lesson: LessonContent,
   onImage: (e: ImageEvent) => void,
   onError: (e: ImageStatus) => void,
 ): Promise<void> {
-  // Early steps are the emptiest and the most useful to see first.
-  const indices = lesson.steps.map((_, i) => i).filter((i) => i !== lesson.steps.length - 1)
-  let next = 0
-  const worker = async () => {
-    while (next < indices.length) {
-      const i = indices[next++]
+  let anchorIdx = lesson.steps.length - 1
+  let anchorUrl = finalUrl
+  while (anchorIdx > 0) {
+    const nextAnchor = Math.max(0, anchorIdx - BATCH)
+    for (let i = anchorIdx - 1; i >= nextAnchor; i--) {
       try {
         const url = firstUrl(
           await runModel(EDIT_MODEL, {
-            prompt: stepPrompt(lesson, i),
-            input_image: finalUrl,
+            prompt: stepPrompt(lesson, i, anchorIdx),
+            input_image: anchorUrl,
             aspect_ratio: 'match_input_image',
             output_format: 'jpg',
             safety_tolerance: 2,
           }),
         )
         onImage({ kind: 'step', index: i, dataUrl: await fetchAsDataUrl(url) })
+        if (i === nextAnchor) anchorUrl = url
       } catch (e) {
         onError({ kind: 'step', index: i, error: e instanceof Error ? e.message : String(e) })
+        if (i === nextAnchor) return // no anchor to continue from
       }
     }
+    anchorIdx = nextAnchor
   }
-  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, indices.length) }, worker))
 }
