@@ -30,7 +30,6 @@ await paintSteps(
   finalUrl,
   DEMO_LESSON,
   async (img) => {
-    if (existsSync(new URL(`step-${img.index}.jpg`, outDir))) return
     await writeFile(new URL(`step-${img.index}.jpg`, outDir), dataUrlToBuffer(img.dataUrl))
     console.log(`  step-${img.index}.jpg`)
   },

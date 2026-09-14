@@ -43,6 +43,11 @@ export const StepSchema = z.object({
     .nullable()
     .describe('If something goes wrong here, how to turn it into a feature. Null if not applicable.'),
   minutes: z.number().describe('Estimated minutes for this step'),
+  paintsIn: z
+    .string()
+    .describe(
+      'The elements this step adds to the painting, as a short noun phrase list for an image editor, e.g. "two dark evergreen trees on the left with snow on their branches". For the prep step: "a thin coat of Liquid White".',
+    ),
   canvasAfter: z
     .string()
     .describe(
