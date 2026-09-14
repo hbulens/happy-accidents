@@ -23,5 +23,6 @@ describe('stepPrompt', () => {
     expect(p).not.toContain(DEMO_LESSON.steps[5].paintsIn)
     expect(p).toContain(DEMO_LESSON.steps[5].canvasAfter)
     expect(p).not.toMatch(/\bno signature\b/i)
+    expect(p).toMatch(/Remove .*any signature/)
   })
 })

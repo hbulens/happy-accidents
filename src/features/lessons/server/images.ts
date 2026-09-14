@@ -78,7 +78,7 @@ export function stepPrompt(lesson: LessonContent, index: number, throughIndex: n
   const removed = lesson.steps.slice(index + 1, throughIndex + 1).map((s) => s.paintsIn)
   const remaining = lesson.steps[index]
   return (
-    `Remove ${removed.join('; and ')} from this oil painting. ` +
+    `Remove ${removed.join('; and ')}; and any signature, initials or lettering from this oil painting. ` +
     `Where they were, show only what was painted underneath, and any area that was never painted is smooth white primed canvas. ` +
     `What remains on the canvas: ${remaining.canvasAfter} ` +
     `Keep everything that remains exactly as it is: same composition, same brushwork, same colours.`
