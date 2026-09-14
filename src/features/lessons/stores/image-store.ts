@@ -44,7 +44,7 @@ export const useImageStore = create<ImageState>()((set, get) => ({
 export function useLessonImage(lesson: Lesson, key: 'final' | number): string | null {
   const images = useImageStore((s) => s.images[lesson.id])
   if (lesson.source.mode === 'demo') {
-    return key === 'final' ? '/demo/final.webp' : `/demo/${stepKey(key)}.webp`
+    return key === 'final' || key === lesson.steps.length - 1 ? '/demo/final.webp' : `/demo/${stepKey(key)}.jpg`
   }
   if (!images) return null
   if (key === 'final') return images.final ?? null

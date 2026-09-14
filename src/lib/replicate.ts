@@ -31,22 +31,43 @@ interface Prediction {
   urls: { get: string; cancel: string }
 }
 
-/** Run an official model (owner/name) and return its output. */
-export async function runModel(model: string, input: Record<string, unknown>, timeoutMs = 180_000): Promise<unknown> {
-  const res = await fetch(`${API}/models/${model}/predictions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token()}`,
-      'Content-Type': 'application/json',
-      Prefer: 'wait=60',
-    },
-    body: JSON.stringify({ input }),
-  })
-  if (!res.ok) {
+const MAX_429_RETRIES = 8
+
+/**
+ * Create a prediction, retrying politely when Replicate throttles us.
+ * Accounts with little credit are limited to a handful of requests per
+ * minute; the 429 body carries a retry_after in seconds.
+ */
+async function createPrediction(model: string, input: Record<string, unknown>): Promise<Prediction> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`${API}/models/${model}/predictions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token()}`,
+        'Content-Type': 'application/json',
+        Prefer: 'wait=60',
+      },
+      body: JSON.stringify({ input }),
+    })
+    if (res.ok) return (await res.json()) as Prediction
     const text = await res.text().catch(() => '')
+    if (res.status === 429 && attempt < MAX_429_RETRIES) {
+      let wait = 10
+      try {
+        wait = Number(JSON.parse(text).retry_after) || wait
+      } catch {
+        /* keep default */
+      }
+      await new Promise((r) => setTimeout(r, (wait + 1) * 1000))
+      continue
+    }
     throw new ReplicateError(`Replicate ${model} returned ${res.status}: ${text.slice(0, 300)}`, res.status === 401 ? 500 : 502)
   }
-  let prediction = (await res.json()) as Prediction
+}
+
+/** Run an official model (owner/name) and return its output. */
+export async function runModel(model: string, input: Record<string, unknown>, timeoutMs = 180_000): Promise<unknown> {
+  let prediction = await createPrediction(model, input)
   const deadline = Date.now() + timeoutMs
   while (prediction.status !== 'succeeded' && prediction.status !== 'failed' && prediction.status !== 'canceled') {
     if (Date.now() > deadline) throw new ReplicateError(`Replicate ${model} timed out`, 504)

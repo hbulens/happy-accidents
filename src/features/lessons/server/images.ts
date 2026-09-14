@@ -6,13 +6,15 @@ import { fetchAsDataUrl, firstUrl, runModel } from '@/lib/replicate'
 
 const PAINT_MODEL = process.env.HAPPY_ACCIDENTS_PAINT_MODEL ?? 'black-forest-labs/flux-2-pro'
 const EDIT_MODEL = process.env.HAPPY_ACCIDENTS_EDIT_MODEL ?? 'black-forest-labs/flux-kontext-pro'
-const CONCURRENCY = 4
+// Replicate throttles low-credit accounts to a burst of 1, so default to one
+// edit at a time; raise HAPPY_ACCIDENTS_IMAGE_CONCURRENCY once the account has credit.
+const CONCURRENCY = Math.max(1, Number(process.env.HAPPY_ACCIDENTS_IMAGE_CONCURRENCY) || 1)
 
 export const STYLE_PROMPT =
   'A finished wet-on-wet oil painting on canvas in the style of Bob Ross and The Joy of Painting: ' +
   'softly blended sky, palette-knife mountains with broken white highlights, fan-brush evergreen trees, ' +
   'reflections pulled straight down into still water, thick knife impasto and visible bristle texture, ' +
-  'gentle warm light, calm and inviting. Only the painting itself fills the frame, no frame, no easel, no people, no text.'
+  'gentle warm light, calm and inviting. Only the painting itself fills the frame, no frame, no easel, no people, no text, no signature, unsigned.'
 
 export interface ImageEvent {
   kind: 'final' | 'step'
@@ -68,7 +70,7 @@ export async function paintStep(finalUrl: string, lesson: LessonContent, index: 
       prompt,
       input_image: finalUrl,
       aspect_ratio: 'match_input_image',
-      output_format: 'webp',
+      output_format: 'jpg',
       safety_tolerance: 2,
     }),
   )
