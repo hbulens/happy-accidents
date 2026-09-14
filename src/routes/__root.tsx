@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { createRootRoute, HeadContent, Link, Outlet, Scripts, useRouter } from '@tanstack/react-router'
 import { Toaster } from 'sonner'
 import appCss from '@/index.css?url'
+import { Logo } from '@/components/Logo'
 
 const SITE_NAME = 'Happy Accidents'
 const DESCRIPTION =
@@ -19,6 +20,12 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+      { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
+      {
+        rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..900,0..100,0..1;1,9..144,300..900,0..100,0..1&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap',
+      },
       { rel: 'stylesheet', href: appCss },
     ],
   }),
@@ -59,15 +66,16 @@ function ClientEntryScript() {
 function RootComponent() {
   return (
     <>
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        <Link to="/" className="font-display text-lg tracking-tight text-sienna">
-          Happy Accidents
+      <nav className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 pb-2 pt-5 sm:px-6">
+        <Link to="/" className="flex items-center gap-2.5">
+          <Logo className="h-8 w-8" />
+          <span className="font-display text-xl font-medium tracking-tight">Happy Accidents</span>
         </Link>
-        <div className="flex gap-1 text-sm">
-          <Link to="/" className="btn-ghost" activeProps={{ className: 'btn-ghost bg-canvas-deep text-ink' }} activeOptions={{ exact: true }}>
+        <div className="flex items-center gap-1">
+          <Link to="/" className="nav-link" activeProps={{ className: 'nav-link nav-link-active' }} activeOptions={{ exact: true }}>
             New painting
           </Link>
-          <Link to="/library" className="btn-ghost" activeProps={{ className: 'btn-ghost bg-canvas-deep text-ink' }}>
+          <Link to="/library" className="nav-link" activeProps={{ className: 'nav-link nav-link-active' }}>
             My paintings
           </Link>
         </div>

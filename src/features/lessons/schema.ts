@@ -22,29 +22,17 @@ export const PointSchema = z.object({
   x: z.number().describe('0 = left edge, 100 = right edge of the canvas'),
   y: z.number().describe('0 = top edge, 75 = bottom edge of the canvas (4:3 aspect)'),
 })
-
-export const LayerSchema = z.object({
-  label: z.string().describe('What this shape represents, e.g. "distant mountain range"'),
-  points: z
-    .array(PointSchema)
-    .describe('Polygon vertices in painting order, 3 to 16 points, closed automatically'),
-  fill: z.string().describe('CSS hex color like #3a5f7d, the mixed paint color as it appears on canvas'),
-  opacity: z.number().describe('0.15 for thin glazes and mist up to 1 for opaque knife work'),
-  soft: z
-    .boolean()
-    .describe('true for blended, feathered edges (sky, mist, water); false for crisp edges (knife, trees)'),
-})
-export type Layer = z.infer<typeof LayerSchema>
+export type Point = z.infer<typeof PointSchema>
 
 export const StepSchema = z.object({
   title: z.string().describe('Short step name, e.g. "Happy little clouds"'),
   phase: PhaseSchema,
-  tool: z.string().describe('Exact brush or knife used, e.g. "2-inch background brush"'),
+  tool: z.string().describe('Main brush or knife used, plain name, e.g. "2-inch background brush"'),
   colors: z.array(z.string()).describe('Palette color names used in this step, matching lesson.palette names'),
   instruction: z
     .string()
     .describe(
-      'The teaching narration for this step, spoken in the instructor voice: 4 to 8 sentences, concrete brush motion, pressure, direction and where on the canvas',
+      'The teaching narration for this step, spoken in the instructor voice: 4 to 7 sentences, concrete brush motion, pressure, direction and where on the canvas',
     ),
   technique: z.string().describe('Name of the technique, e.g. "criss-cross strokes", "tapping", "pulling down reflections"'),
   brushLoading: z.string().describe('How to load the brush or knife: how much paint, how thin, which edge'),
@@ -55,9 +43,11 @@ export const StepSchema = z.object({
     .nullable()
     .describe('If something goes wrong here, how to turn it into a feature. Null if not applicable.'),
   minutes: z.number().describe('Estimated minutes for this step'),
-  layers: z
-    .array(LayerSchema)
-    .describe('0 to 5 shapes added to the canvas preview by this step, back to front'),
+  canvasAfter: z
+    .string()
+    .describe(
+      'What is on the canvas after this step is finished, cumulative, 1 to 3 plain sentences, for generating a progress image: e.g. "A blended pale blue sky with soft white clouds covers the top half. Below the horizon the canvas is still bare white."',
+    ),
 })
 export type Step = z.infer<typeof StepSchema>
 
@@ -87,6 +77,11 @@ export const LessonSchema = z.object({
   basecoat: z.string().describe('Base coat instruction, usually a thin even coat of Liquid White'),
   palette: z.array(PaletteColorSchema).describe('Only the colors needed for this painting'),
   tools: z.array(ToolSchema).describe('Only the brushes and knives needed'),
+  paintingPrompt: z
+    .string()
+    .describe(
+      'A vivid 60 to 100 word description of the FINISHED painting for an image model: subject, composition left to right and near to far, light direction, time of day, colors, mood. Plain description only, no instructions to the painter.',
+    ),
   composition: z.object({
     horizonY: z.number().describe('Horizon line height, 0 top to 75 bottom'),
     focalPoint: PointSchema,

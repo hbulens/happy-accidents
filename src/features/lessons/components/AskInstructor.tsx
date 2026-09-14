@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { MessageCircleQuestion, Send } from 'lucide-react'
+import { Send } from 'lucide-react'
 
 interface Props {
   instructorName: string
@@ -21,28 +21,27 @@ export function AskInstructor({ instructorName, pending, answer, error, lastQues
   }
 
   return (
-    <section className="card p-4">
-      <h3 className="flex items-center gap-2 text-sm font-semibold">
-        <MessageCircleQuestion className="h-4 w-4 text-phthalo" /> Ask {instructorName}
-      </h3>
-      <form onSubmit={submit} className="mt-2 flex gap-2">
+    <section className="card p-5">
+      <p className="eyebrow">Ask {instructorName}</p>
+      <p className="mt-1 text-sm text-ink-soft">Type it, or just say it out loud with voice control on.</p>
+      <form onSubmit={submit} className="mt-3 flex gap-2">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="My mountain highlight turned to mud, what now?"
-          className="min-w-0 flex-1 rounded-full border border-canvas-deep bg-white px-4 py-2 text-sm outline-none focus:border-phthalo"
+          className="field min-w-0 flex-1 px-4 py-2.5 text-base"
           disabled={pending}
         />
-        <button type="submit" className="btn-primary px-4" disabled={pending || !text.trim()} aria-label="Ask">
+        <button type="submit" className="btn-primary btn-primary-blue px-4" disabled={pending || !text.trim()} aria-label="Ask">
           <Send className="h-4 w-4" />
         </button>
       </form>
       {pending && <p className="mt-3 text-sm text-ink-soft">{instructorName} is thinking…</p>}
-      {error && <p className="mt-3 text-sm text-crimson">{error}</p>}
+      {error && <p className="mt-3 text-sm text-alizarin">{error}</p>}
       {answer && !pending && (
-        <div className="mt-3 rounded-xl bg-phthalo-soft p-3 text-sm">
-          {lastQuestion && <p className="mb-1 text-xs text-ink-soft">You asked: "{lastQuestion}"</p>}
-          <p>{answer}</p>
+        <div className="mt-4 border-l-2 border-alizarin pl-4">
+          {lastQuestion && <p className="text-xs text-ink-faint">You asked: “{lastQuestion}”</p>}
+          <p className="font-display-text mt-1 text-lg leading-relaxed">{answer}</p>
         </div>
       )}
     </section>

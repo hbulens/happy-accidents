@@ -20,6 +20,11 @@ describe('LessonSchema', () => {
     expect(DEMO_LESSON.steps[0].phase).toBe('prep')
     expect(DEMO_LESSON.steps.at(-1)?.phase).toBe('finish')
   })
+
+  it('every demo step describes the canvas after it, and the lesson has a painting prompt', () => {
+    expect(DEMO_LESSON.paintingPrompt.length).toBeGreaterThan(100)
+    for (const step of DEMO_LESSON.steps) expect(step.canvasAfter.length).toBeGreaterThan(40)
+  })
 })
 
 describe('request schemas', () => {

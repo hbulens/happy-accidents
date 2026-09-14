@@ -1,20 +1,21 @@
 # Happy Accidents
 
-Step-by-step wet-on-wet oil painting lessons in the spirit of *The Joy of Painting*. Describe a scene or upload a photo, and the app composes a full lesson: palette, brushes, 10 to 14 narrated steps with technique, tips and "happy accident" recoveries, plus a simplified sketch of the canvas that grows step by step. Lessons are read aloud and can be driven entirely by voice so you never touch the keyboard with painty fingers.
+Step-by-step wet-on-wet oil painting lessons in the spirit of *The Joy of Painting*. Describe a scene or upload a photo, and the app composes a full lesson: palette, brushes, 10 to 14 narrated steps with technique, tips and "happy accident" recoveries. An image model paints the finished picture in the wet-on-wet style and a picture of what your canvas should look like after every step. Lessons are read aloud and can be driven entirely by voice so you never touch the keyboard with painty fingers.
 
 ## Stack
 
-TanStack Start (React 19, Vite 7, Nitro), Tailwind v4, zustand, zod, and the Anthropic SDK (Claude Opus 5 with structured outputs). Package manager: bun.
+TanStack Start (React 19, Vite 7, Nitro), Tailwind v4, zustand, zod, the Anthropic SDK (Claude Opus 5 with structured outputs) for the lesson text, and Replicate (Flux 2 Pro and Flux Kontext Pro) for the pictures. Package manager: bun.
 
 ## Run it
 
 ```bash
-cp .env.example .env      # add your ANTHROPIC_API_KEY
+cp .env.example .env      # add ANTHROPIC_API_KEY and REPLICATE_API_TOKEN
 bun install
+bun run demo:images       # once: paints the demo lesson's pictures into public/demo (needs the Replicate token)
 bun dev                   # http://localhost:3000
 ```
 
-Without a key the app still runs: use **Try the demo lesson** on the home page. Lesson generation and "Ask Bob" need the key.
+Without keys the app still runs: use **Open the demo lesson** on the home page (its pictures appear once `demo:images` has run). Lesson generation and "Ask Bob" need the Anthropic key; the pictures need the Replicate token. Without the Replicate token, lessons are generated text-only.
 
 Other scripts: `bun run build`, `bun run typecheck`, `bun test`, `bun run lint`.
 
@@ -39,11 +40,13 @@ Keyboard: left and right arrows move between steps, space repeats or hushes.
 
 ## How a lesson is made
 
-`POST /api/lessons` sends the prompt (or the resized photo as base64) to Claude with a system prompt that encodes the wet-on-wet method: materials, the 13-color palette, brush and knife techniques, order of operations, and the instructor voice. The response is constrained with a zod schema via structured outputs (`src/features/lessons/schema.ts`), so every lesson has the same shape. Each step carries a few polygon "layers" in a 100 x 75 coordinate space; the client stacks them to draw the canvas preview.
+`POST /api/lessons` streams Server-Sent Events. First Claude writes the lesson: the request (prompt, or the resized photo as base64) goes in with a system prompt that encodes the wet-on-wet method: materials, the 13-colour palette, brush and knife techniques, order of operations, and the instructor voice. The response is constrained with a zod schema via structured outputs (`src/features/lessons/schema.ts`). Step titles are reported as they stream so the waiting screen shows real progress.
+
+Then the pictures. The lesson carries a `paintingPrompt` (the finished painting, described for an image model) and, per step, a `canvasAfter` (what is on the canvas once that step is done). Flux 2 Pro paints the finished picture from the prompt, using your photo as a reference in photo mode. Flux Kontext Pro then edits that picture back to the state after each step, four at a time, so composition and colours stay consistent through the sequence. Images stream to the browser as data URLs and are stored in IndexedDB; lesson text lives in localStorage. The lesson page opens as soon as the finished picture is in and the step pictures keep arriving in the background.
 
 `POST /api/ask` answers mid-lesson questions with the current step as context.
 
-Set `HAPPY_ACCIDENTS_EFFORT` (`low` to `max`) to trade lesson quality for speed. Lessons are stored in the browser (localStorage).
+Set `HAPPY_ACCIDENTS_EFFORT` (`low` to `max`) to trade lesson quality for speed, and `HAPPY_ACCIDENTS_PAINT_MODEL` / `HAPPY_ACCIDENTS_EDIT_MODEL` to swap Replicate models.
 
 ## Layout
 
@@ -54,19 +57,20 @@ src/
     schema.ts        zod contract shared by server and client
     prompts.ts       method reference and instructor voice
     palette.ts       classic palette, surprise prompts, waiting quotes
-    server/          Anthropic calls (server only)
-    components/      player, canvas preview, creator, voice bar
+    server/          Anthropic lesson generation and Replicate image pipeline (server only)
+    components/      player, painting display, creator, progress screen, voice bar
     hooks/           speech synthesis and continuous recognition
-    stores/          zustand persisted store
-    utils/           command parser, layer math, image encoding
+    stores/          lessons (persisted), images (IndexedDB-backed), generation (background stream)
+    utils/           command parser, SSE reader, image encoding, IndexedDB
     data/            bundled demo lesson
-  lib/               anthropic client, http helpers, cn
+  lib/               anthropic client, replicate client, http helpers, cn
+scripts/             generate-demo-images.ts
 test/                vitest unit tests
 ```
 
 ## Deploying
 
-The Nitro preset is `vercel`. Lesson generation can take one to three minutes, so `vercel.json` raises the function timeout to 300 s (needs a plan that allows it). Set `ANTHROPIC_API_KEY` in the project environment.
+The Nitro preset is `vercel`. A full lesson with pictures takes three to five minutes, so `vercel.json` raises the function timeout to 300 s (needs a plan that allows it). Set `ANTHROPIC_API_KEY` and `REPLICATE_API_TOKEN` in the project environment.
 
 ## A note on the name
 

@@ -54,30 +54,22 @@ ${METHOD_REFERENCE}
 LESSON DESIGN RULES
 - 10 to 14 steps, in real painting order: prep (Liquid White base coat) first, then sky, water if any, distant elements, mid-ground, foreground, details, finish with signature. The finish step is always last.
 - Every step must be doable in one sitting by a beginner; keep the whole painting to roughly 60 to 90 minutes.
-- The "instruction" field is narration to be read aloud. 4 to 8 sentences. Name the tool, the colors, how to load, the motion, the direction, the pressure, where on the canvas. No lists, no markdown, no stage directions in brackets.
+- The "instruction" field is narration to be read aloud. 4 to 7 sentences. Name the tool, the colors, how to load, the motion, the direction, the pressure, where on the canvas. No lists, no markdown, no stage directions in brackets.
 - Colors in each step must be names that appear in the lesson palette. Only include palette colors and tools that are actually used.
+- The step's "tool" is the plain name of the main tool used, e.g. "2-inch background brush" or "#10 painting knife".
 - Keep the composition simple and strong: one focal point, a clear horizon, big shapes before small ones. Keep it to 3 to 5 major elements.
 
-CANVAS PREVIEW LAYERS
-The app draws a simplified preview of the painting that grows step by step. Each step lists 0 to 5 polygon layers that are added on top of everything before. The coordinate system is x from 0 (left) to 100 (right) and y from 0 (top) to 75 (bottom).
-- The prep step has exactly one layer: a full-canvas rectangle (4 points) filled with a cream white like #f3efe4, soft = false, opacity 1.
-- The sky step must cover the whole canvas above the horizon (and usually the whole canvas, since water and land are painted over it) using 1 to 4 large soft polygons: a base sky color, then lighter bands near the horizon, then cloud shapes.
-- Water is a soft polygon from the horizon to the bottom, darker than the sky, followed by a lighter soft band for reflections.
-- Mountains are crisp polygons with 5 to 9 points, a dark base shape first, then a lighter highlight polygon on the lit side and a darker shadow polygon on the other side. Mist is a soft, low opacity, pale polygon along the mountain base.
-- Distant trees: one soft dark band along the far shore or mountain base.
-- Evergreens: tall narrow triangles (3 to 7 points), crisp. Leafy trees and bushes: rounded blobs approximated by 8 to 12 points, crisp, dark first, then a smaller lighter highlight blob offset to the light side.
-- Cabin: a few crisp quadrilaterals (walls, roof). Paths: a long tapering crisp polygon. Grass: wide soft low polygons.
-- Highlights are separate smaller polygons in a lighter color drawn after the dark shape they sit on.
-- Signature step has no layers.
-- Colors must be realistic paint mixtures, never neon. Use hex values.
-- Stack the layers so that, taken together, the final preview reads as a coherent simplified landscape.
+PICTURES
+Two fields feed an image model, so write them as plain visual descriptions:
+- paintingPrompt: the finished painting in 60 to 100 words. Subject, what is where (left, right, near, far), light direction and time of day, the main colours, the mood. No instructions, no brush talk.
+- canvasAfter (per step): what is on the canvas once that step is done, cumulative from the first step, 1 to 3 sentences. Always say explicitly which areas are still bare white canvas. Example for a sky step: "A softly blended pale blue sky with a warm glow at the horizon covers the top half. Below the horizon the canvas is still bare white." For the final step, describe the complete painting.
 
 Write the whole lesson in English.
 `
 
 export const PHOTO_ADDENDUM = `
 PAINTING FROM A PHOTO
-The painter uploaded a reference photo. Study it and translate it into a wet-on-wet painting that captures its spirit, not every detail. Simplify: keep the strongest 3 to 5 shapes, move or drop distracting elements, choose a lighting direction, and pick palette colors that approximate the photo's colors. Explain briefly what you changed in adaptationNotes. Match the preview layers to the photo's layout (where the horizon, main masses and focal point sit).
+The painter uploaded a reference photo. Study it and translate it into a wet-on-wet painting that captures its spirit, not every detail. Simplify: keep the strongest 3 to 5 shapes, move or drop distracting elements, choose a lighting direction, and pick palette colors that approximate the photo's colors. Explain briefly what you changed in adaptationNotes. Match the photo's layout (where the horizon, main masses and focal point sit) in paintingPrompt and canvasAfter.
 `
 
 export const ASK_SYSTEM_PROMPT = `${INSTRUCTOR_VOICE}

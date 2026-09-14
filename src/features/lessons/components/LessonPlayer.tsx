@@ -8,8 +8,9 @@ import { useLessonStore } from '@/features/lessons/stores/lesson-store'
 import { useSpeech } from '@/features/lessons/hooks/useSpeech'
 import { useVoiceCommands } from '@/features/lessons/hooks/useVoiceCommands'
 import type { VoiceCommand } from '@/features/lessons/utils/commands'
-import { totalMinutes } from '@/features/lessons/utils/layers'
-import { CanvasPreview } from '@/features/lessons/components/CanvasPreview'
+import { Painting } from '@/features/lessons/components/Painting'
+import { useGenerationStore } from '@/features/lessons/stores/generation-store'
+import { useImageStore, useLessonImage } from '@/features/lessons/stores/image-store'
 import { StepCard } from '@/features/lessons/components/StepCard'
 import { PalettePanel } from '@/features/lessons/components/PalettePanel'
 import { ToolsPanel } from '@/features/lessons/components/ToolsPanel'
@@ -22,7 +23,7 @@ interface Props {
 }
 
 type Panel = 'step' | 'palette' | 'tools'
-type View = 'progress' | 'finished'
+type View = 'step' | 'finished' | 'reference'
 
 export function LessonPlayer({ lesson }: Props) {
   const savedStep = useLessonStore((s) => s.progress[lesson.id] ?? 0)
@@ -35,11 +36,19 @@ export function LessonPlayer({ lesson }: Props) {
   const step = lesson.steps[stepIndex]
 
   const [panel, setPanel] = useState<Panel>('step')
-  const [view, setView] = useState<View>('progress')
+  const [view, setView] = useState<View>('step')
   const [asking, setAsking] = useState(false)
   const [answer, setAnswer] = useState<string | null>(null)
   const [askError, setAskError] = useState<string | null>(null)
   const [lastQuestion, setLastQuestion] = useState<string | null>(null)
+  const loadImages = useImageStore((s) => s.load)
+  useEffect(() => {
+    void loadImages(lesson.id)
+  }, [lesson.id, loadImages])
+  const stepImage = useLessonImage(lesson, stepIndex)
+  const finalImage = useLessonImage(lesson, 'final')
+  const generating = useGenerationStore((s) => s.running && s.lessonId === lesson.id)
+  const imageError = useGenerationStore((s) => (s.lessonId === lesson.id ? s.progress.imageError : null))
 
   const { speak, cancel, speaking, supported: ttsSupported } = useSpeech(settings.speechRate)
 
@@ -63,7 +72,7 @@ export function LessonPlayer({ lesson }: Props) {
       const clamped = Math.min(Math.max(index, 0), total - 1)
       setStep(lesson.id, clamped)
       setPanel('step')
-      setView('progress')
+      setView('step')
       if (settings.autoRead) readStep(clamped)
     },
     [lesson.id, total, setStep, settings.autoRead, readStep],
@@ -91,11 +100,7 @@ export function LessonPlayer({ lesson }: Props) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             question,
-            lesson: {
-              title: lesson.title,
-              sceneDescription: lesson.sceneDescription,
-              palette: lesson.palette.map((c) => c.name),
-            },
+            lesson: { title: lesson.title, sceneDescription: lesson.sceneDescription, palette: lesson.palette.map((c) => c.name) },
             step: { index: stepIndex, title: step.title, tool: step.tool, colors: step.colors, instruction: step.instruction },
           }),
         })
@@ -167,10 +172,10 @@ export function LessonPlayer({ lesson }: Props) {
     onCommand: handleCommand,
   })
 
-  // Keyboard shortcuts for when hands are clean.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.target as HTMLElement)?.tagName === 'INPUT') return
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
       if (e.key === 'ArrowRight') goTo(stepIndex + 1)
       if (e.key === 'ArrowLeft') goTo(stepIndex - 1)
       if (e.key === ' ') {
@@ -183,30 +188,30 @@ export function LessonPlayer({ lesson }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [goTo, stepIndex, speaking, cancel, readStep])
 
-  const minutes = totalMinutes(lesson)
-  const showThrough = view === 'finished' ? total - 1 : stepIndex
+  const minutes = lesson.steps.reduce((n, s) => n + s.minutes, 0) || lesson.totalMinutes
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link to="/library" className="btn-ghost" aria-label="Back to library">
+          <Link to="/library" className="btn-ghost" aria-label="Back to my paintings">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h1 className="font-display text-2xl leading-tight sm:text-3xl">{lesson.title}</h1>
+            <h1 className="font-display text-2xl font-medium leading-tight sm:text-3xl">{lesson.title}</h1>
             <p className="text-xs text-ink-soft">
               {lesson.mood} · {lesson.difficulty} · about {minutes} minutes · {lesson.canvas}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1 text-sm text-ink-soft">
-          <span className="font-medium text-ink">{stepIndex + 1}</span>/{total}
-        </div>
+        <p className="font-display text-xl">
+          <span className="text-alizarin">{stepIndex + 1}</span>
+          <span className="text-ink-faint"> / {total}</span>
+        </p>
       </header>
 
-      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-canvas-deep" aria-hidden>
-        <div className="h-full bg-sienna transition-all" style={{ width: `${((stepIndex + 1) / total) * 100}%` }} />
+      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-linen-deep" aria-hidden>
+        <div className="h-full rounded-full bg-alizarin transition-all" style={{ width: `${((stepIndex + 1) / total) * 100}%` }} />
       </div>
 
       <div className="mt-4">
@@ -220,70 +225,73 @@ export function LessonPlayer({ lesson }: Props) {
           speaking={speaking}
           onStopSpeaking={cancel}
         />
-        {!ttsSupported && (
-          <p className="mt-2 text-xs text-crimson">This browser cannot read aloud. Try Chrome, Edge or Safari.</p>
-        )}
+        {!ttsSupported && <p className="mt-2 text-xs text-alizarin">This browser cannot read aloud. Try Chrome, Edge or Safari.</p>}
       </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+      <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,11fr)_minmax(0,10fr)]">
         <section>
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex gap-1 rounded-full bg-canvas-deep p-1 text-sm">
-              <button
-                type="button"
-                onClick={() => setView('progress')}
-                className={cn('rounded-full px-3 py-1', view === 'progress' && 'bg-white shadow')}
-              >
-                So far
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="tabs" role="tablist">
+              <button type="button" role="tab" aria-selected={view === 'step'} className="tab" onClick={() => setView('step')}>
+                After this step
               </button>
-              <button
-                type="button"
-                onClick={() => setView('finished')}
-                className={cn('rounded-full px-3 py-1', view === 'finished' && 'bg-white shadow')}
-              >
-                Finished
+              <button type="button" role="tab" aria-selected={view === 'finished'} className="tab" onClick={() => setView('finished')}>
+                Finished painting
               </button>
+              {lesson.source.mode === 'photo' && lesson.source.thumbnail && (
+                <button type="button" role="tab" aria-selected={view === 'reference'} className="tab" onClick={() => setView('reference')}>
+                  Your photo
+                </button>
+              )}
             </div>
-            {lesson.source.mode === 'photo' && lesson.source.thumbnail && (
-              <img
-                src={lesson.source.thumbnail}
-                alt="Reference photo"
-                className="h-10 w-14 rounded-md object-cover ring-1 ring-black/10"
+            {generating && <span className="chip">painting the pictures…</span>}
+          </div>
+
+          <div className="easel">
+            {view === 'reference' && lesson.source.mode === 'photo' ? (
+              <Painting src={lesson.source.thumbnail} alt="Reference photo" className="aspect-[4/3]" />
+            ) : view === 'finished' ? (
+              <Painting src={finalImage} alt="The finished painting" pending={generating} note={imageError ?? undefined} className="aspect-[4/3]" />
+            ) : (
+              <Painting
+                src={stepImage}
+                alt={`The canvas after step ${stepIndex + 1}`}
+                pending={generating}
+                note={imageError ?? (generating ? 'Painting this step…' : undefined)}
+                className="aspect-[4/3]"
               />
             )}
           </div>
-          <CanvasPreview
-            steps={lesson.steps}
-            throughStep={showThrough}
-            highlightStep={view === 'progress' ? stepIndex : null}
-            className="aspect-[4/3]"
-          />
-          <p className="mt-2 text-xs text-ink-soft">
-            {view === 'progress'
-              ? 'A simplified sketch of the canvas after this step. Your painting will be richer.'
-              : lesson.sceneDescription}
-          </p>
+
+          <div className="card mt-4 p-4">
+            {view === 'finished' ? (
+              <p className="font-display-text text-lg leading-relaxed text-ink-soft">{lesson.sceneDescription}</p>
+            ) : view === 'reference' ? (
+              <p className="text-sm text-ink-soft">{lesson.adaptationNotes ?? 'The lesson simplifies this photo into big paintable shapes.'}</p>
+            ) : (
+              <>
+                <p className="eyebrow">Your canvas should look like this now</p>
+                <p className="font-display-text mt-1 text-lg leading-relaxed">{step.canvasAfter}</p>
+              </>
+            )}
+          </div>
 
           <div className="mt-4 flex items-center justify-between gap-2">
             <button type="button" onClick={() => goTo(stepIndex - 1)} disabled={stepIndex === 0} className="btn-secondary">
               <ChevronLeft className="h-4 w-4" /> Back
             </button>
-            <button type="button" onClick={() => readStep(stepIndex)} className="btn-ghost" title="Read this step again">
-              <RotateCcw className="h-4 w-4" /> Repeat
+            <button type="button" onClick={() => readStep(stepIndex)} className="btn-ghost" title="Read this step again (space)">
+              <RotateCcw className="h-4 w-4" />
+              <span className="hidden sm:inline">Read again</span>
             </button>
-            <button
-              type="button"
-              onClick={() => goTo(stepIndex + 1)}
-              disabled={stepIndex >= total - 1}
-              className="btn-primary"
-            >
+            <button type="button" onClick={() => goTo(stepIndex + 1)} disabled={stepIndex >= total - 1} className="btn-primary">
               Next <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </section>
 
         <section className="space-y-4">
-          <div className="flex gap-1 rounded-full bg-canvas-deep p-1 text-sm">
+          <div className="tabs w-full" role="tablist">
             <PanelTab active={panel === 'step'} onClick={() => setPanel('step')}>
               This step
             </PanelTab>
@@ -297,31 +305,23 @@ export function LessonPlayer({ lesson }: Props) {
 
           {panel === 'step' && <StepCard step={step} index={stepIndex} total={total} paletteHex={paletteHex} />}
           {panel === 'palette' && (
-            <div className="card p-4">
-              <p className="mb-3 text-sm text-ink-soft">
-                Base coat: {lesson.basecoat}
-              </p>
+            <div className="card p-5">
+              <p className="eyebrow">Base coat</p>
+              <p className="mb-4 mt-1 text-sm text-ink-soft">{lesson.basecoat}</p>
               <PalettePanel lesson={lesson} activeColors={step.colors} />
             </div>
           )}
           {panel === 'tools' && (
-            <div className="card p-4">
+            <div className="card p-5">
               <ToolsPanel lesson={lesson} activeTool={step.tool} />
             </div>
           )}
 
-          <AskInstructor
-            instructorName={settings.instructorName}
-            pending={asking}
-            answer={answer}
-            error={askError}
-            lastQuestion={lastQuestion}
-            onAsk={ask}
-          />
+          <AskInstructor instructorName={settings.instructorName} pending={asking} answer={answer} error={askError} lastQuestion={lastQuestion} onAsk={ask} />
 
           {stepIndex === total - 1 && (
-            <div className="card bg-gold/10 p-4 text-sm">
-              <p className="font-display text-lg">{lesson.closing}</p>
+            <div className="card border-cadmium/40 bg-cadmium-soft/40 p-5">
+              <p className="font-display-text text-lg leading-relaxed">{lesson.closing}</p>
             </div>
           )}
         </section>
@@ -332,11 +332,7 @@ export function LessonPlayer({ lesson }: Props) {
 
 function PanelTab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn('inline-flex flex-1 items-center justify-center gap-1 rounded-full px-3 py-1.5', active && 'bg-white shadow')}
-    >
+    <button type="button" role="tab" aria-selected={active} onClick={onClick} className={cn('tab flex-1')}>
       {children}
     </button>
   )

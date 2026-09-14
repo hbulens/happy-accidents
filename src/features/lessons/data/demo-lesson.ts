@@ -15,6 +15,7 @@ export const DEMO_LESSON: LessonContent = {
   basecoat:
     'A thin, even coat of Liquid White over the whole canvas with the 2-inch brush. Just enough to make it slick; if it looks white and wet, you have too much.',
   palette: [
+    { name: 'Liquid White', hex: '#f7f5ee', role: 'Base coat that keeps the canvas wet' },
     { name: 'Titanium White', hex: '#f4f1e8', role: 'Sky, snow, highlights and water lines' },
     { name: 'Phthalo Blue', hex: '#0b2c6a', role: 'Sky, water and snow shadows' },
     { name: 'Prussian Blue', hex: '#0f2540', role: 'Mountain base and tree darks' },
@@ -23,14 +24,18 @@ export const DEMO_LESSON: LessonContent = {
     { name: 'Sap Green', hex: '#3d5a1e', role: 'Evergreens' },
     { name: 'Cadmium Yellow', hex: '#f2c11c', role: 'Tree highlights and the cabin window' },
     { name: 'Bright Red', hex: '#c8201d', role: 'Signature' },
+    { name: 'Dark Sienna', hex: '#3d1f12', role: 'Warms the cabin logs' },
   ],
   tools: [
     { name: '2-inch background brush', role: 'Base coat, sky, water and snow' },
     { name: '1-inch landscape brush', role: 'Distant trees and bushes' },
     { name: 'Fan brush', role: 'Evergreens and grass' },
     { name: '#10 painting knife', role: 'Mountains and the cabin' },
+    { name: '#5 painting knife', role: 'Water lines and the cabin window' },
     { name: 'Script liner brush', role: 'Trunks, branches, footprints and the signature' },
   ],
+  paintingPrompt:
+    'A serene winter landscape in soft wet-on-wet oils. A small dark log cabin with a snow-covered roof and one glowing yellow window sits on the left bank of a still, frozen lake. Three dark evergreens of different heights stand behind and beside it, with a pale line of distant trees along the far shore. Beyond, two soft blue-grey mountains with broken white snow highlights dissolve into mist. Late-afternoon winter light, pale blue sky warming to a faint pink glow at the horizon. Soft white snowbanks with blue shadows in the foreground and a trail of footprints leading toward the cabin door.',
   composition: {
     horizonY: 44,
     focalPoint: { x: 30, y: 50 },
@@ -51,9 +56,8 @@ export const DEMO_LESSON: LessonContent = {
       watchOut: 'Too much Liquid White makes every color slide and turn milky.',
       happyAccident: null,
       minutes: 5,
-      layers: [
-        { label: 'canvas', points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 75 }, { x: 0, y: 75 }], fill: '#f3efe4', opacity: 1, soft: false },
-      ],
+      canvasAfter:
+        'The whole canvas is covered in a thin, slick, even coat of Liquid White. Nothing else is painted yet; it is a blank, faintly glossy white canvas.',
     },
     {
       title: 'A soft winter sky',
@@ -68,11 +72,8 @@ export const DEMO_LESSON: LessonContent = {
       watchOut: 'Pressing hard while blending drags the blue down into the horizon.',
       happyAccident: 'A darker patch at the top becomes a weather front coming in; leave it and enjoy it.',
       minutes: 7,
-      layers: [
-        { label: 'sky base', points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 75 }, { x: 0, y: 75 }], fill: '#8faccb', opacity: 1, soft: true },
-        { label: 'sky lighter band', points: [{ x: 0, y: 22 }, { x: 100, y: 22 }, { x: 100, y: 75 }, { x: 0, y: 75 }], fill: '#c8d8e6', opacity: 0.9, soft: true },
-        { label: 'warm horizon glow', points: [{ x: 0, y: 36 }, { x: 100, y: 36 }, { x: 100, y: 75 }, { x: 0, y: 75 }], fill: '#e9dcd6', opacity: 0.7, soft: true },
-      ],
+      canvasAfter:
+        'A softly blended winter sky fills the top half: pale blue at the top fading to a warm, almost white glow at the horizon, with a faint touch of pink. The bottom half of the canvas is still bare white.',
     },
     {
       title: 'The frozen lake',
@@ -87,10 +88,8 @@ export const DEMO_LESSON: LessonContent = {
       watchOut: 'Curved downward strokes make the water look like it is pouring.',
       happyAccident: null,
       minutes: 5,
-      layers: [
-        { label: 'lake', points: [{ x: 0, y: 44 }, { x: 100, y: 44 }, { x: 100, y: 75 }, { x: 0, y: 75 }], fill: '#7f9bb8', opacity: 1, soft: true },
-        { label: 'lake far light', points: [{ x: 0, y: 44 }, { x: 100, y: 44 }, { x: 100, y: 50 }, { x: 0, y: 50 }], fill: '#c3d2df', opacity: 0.7, soft: true },
-      ],
+      canvasAfter:
+        'The sky is finished. Below the horizon, a smooth pale blue-grey frozen lake fills the bottom of the canvas, lighter near the horizon and darker toward the bottom, with soft horizontal blending. No land, trees or mountains yet.',
     },
     {
       title: 'Big soft mountains',
@@ -105,12 +104,8 @@ export const DEMO_LESSON: LessonContent = {
       watchOut: 'Pressing on the highlight mixes it into the dark and you lose the sparkle.',
       happyAccident: 'If a highlight skips, that gap is a shadowed ravine. Leave it.',
       minutes: 10,
-      layers: [
-        { label: 'mountain base', points: [{ x: 0, y: 44 }, { x: 8, y: 34 }, { x: 22, y: 27 }, { x: 36, y: 33 }, { x: 52, y: 22 }, { x: 66, y: 16 }, { x: 80, y: 26 }, { x: 100, y: 34 }, { x: 100, y: 44 }], fill: '#5b6a86', opacity: 1, soft: false },
-        { label: 'right peak highlight', points: [{ x: 66, y: 16 }, { x: 80, y: 26 }, { x: 100, y: 34 }, { x: 100, y: 44 }, { x: 70, y: 44 }], fill: '#dfe6ee', opacity: 0.85, soft: false },
-        { label: 'left peak highlight', points: [{ x: 22, y: 27 }, { x: 36, y: 33 }, { x: 40, y: 44 }, { x: 24, y: 44 }], fill: '#cfd8e2', opacity: 0.8, soft: false },
-        { label: 'shadow sides', points: [{ x: 52, y: 22 }, { x: 66, y: 16 }, { x: 70, y: 44 }, { x: 48, y: 44 }], fill: '#4a5872', opacity: 0.9, soft: false },
-      ],
+      canvasAfter:
+        'Two pale blue-grey palette-knife mountains rise across the horizon, the taller one on the right, with crisp broken white snow highlights on their right faces and darker blue shadows on their left. Sky above, frozen lake below; no trees or cabin yet.',
     },
     {
       title: 'Mist at the base',
@@ -125,9 +120,8 @@ export const DEMO_LESSON: LessonContent = {
       watchOut: 'Overworking turns the mist grey and kills the mountain.',
       happyAccident: null,
       minutes: 3,
-      layers: [
-        { label: 'mist', points: [{ x: 0, y: 36 }, { x: 100, y: 36 }, { x: 100, y: 45 }, { x: 0, y: 45 }], fill: '#e6ebf0', opacity: 0.75, soft: true },
-      ],
+      canvasAfter:
+        'The base of the mountains dissolves into soft white mist so they look far away. Sky, mountains with snow highlights, mist, and the frozen lake are painted. Still no trees, cabin or snowbanks.',
     },
     {
       title: 'Distant tree line',
@@ -142,9 +136,8 @@ export const DEMO_LESSON: LessonContent = {
       watchOut: 'Too dark and they jump in front of the mountains.',
       happyAccident: null,
       minutes: 5,
-      layers: [
-        { label: 'distant trees', points: [{ x: 0, y: 42 }, { x: 6, y: 38 }, { x: 12, y: 41 }, { x: 18, y: 36 }, { x: 24, y: 40 }, { x: 30, y: 37 }, { x: 38, y: 41 }, { x: 46, y: 39 }, { x: 54, y: 42 }, { x: 62, y: 40 }, { x: 70, y: 43 }, { x: 70, y: 46 }, { x: 0, y: 46 }], fill: '#7f95a3', opacity: 0.9, soft: true },
-      ],
+      canvasAfter:
+        'A soft, pale blue-green line of small distant trees sits along the far shore on the left two-thirds, under the misty mountains. Sky, mountains, mist, distant trees and the frozen lake are painted; no foreground yet.',
     },
     {
       title: 'The far shore and its reflection',
@@ -159,10 +152,8 @@ export const DEMO_LESSON: LessonContent = {
       watchOut: 'A crooked water line tips the whole lake.',
       happyAccident: null,
       minutes: 5,
-      layers: [
-        { label: 'tree reflection', points: [{ x: 0, y: 46 }, { x: 70, y: 46 }, { x: 70, y: 54 }, { x: 0, y: 55 }], fill: '#8b9fb0', opacity: 0.6, soft: true },
-        { label: 'snow shore', points: [{ x: 0, y: 44 }, { x: 70, y: 44 }, { x: 70, y: 47 }, { x: 0, y: 47 }], fill: '#eef1f3', opacity: 0.95, soft: true },
-      ],
+      canvasAfter:
+        'A thin white snowy far shore runs along the horizon under the distant trees, with a soft, slightly darker reflection of the tree line pulled straight down into the ice and a bright thin white water line along the shore edge. No evergreens, cabin or snowbanks yet.',
     },
     {
       title: 'Happy little evergreens',
@@ -177,11 +168,8 @@ export const DEMO_LESSON: LessonContent = {
       watchOut: 'Starting wide at the top makes a lollipop, not a pine.',
       happyAccident: 'A tree that leans is a tree with character. Build a little bush at its foot.',
       minutes: 8,
-      layers: [
-        { label: 'evergreen 1', points: [{ x: 10, y: 24 }, { x: 14, y: 33 }, { x: 12.5, y: 33 }, { x: 16.5, y: 41 }, { x: 15, y: 41 }, { x: 19, y: 47 }, { x: 1, y: 47 }, { x: 5, y: 41 }, { x: 3.5, y: 41 }, { x: 7.5, y: 33 }, { x: 6, y: 33 }], fill: '#233a26', opacity: 1, soft: false },
-        { label: 'evergreen 2', points: [{ x: 24, y: 28 }, { x: 27.5, y: 36 }, { x: 26, y: 36 }, { x: 29.5, y: 42 }, { x: 28, y: 42 }, { x: 31.5, y: 47 }, { x: 16.5, y: 47 }, { x: 20, y: 42 }, { x: 18.5, y: 42 }, { x: 22, y: 36 }, { x: 20.5, y: 36 }], fill: '#1f3322', opacity: 1, soft: false },
-        { label: 'evergreen 3', points: [{ x: 44, y: 30 }, { x: 47.5, y: 38 }, { x: 46, y: 38 }, { x: 49.5, y: 43 }, { x: 48, y: 43 }, { x: 51, y: 47 }, { x: 37, y: 47 }, { x: 40, y: 43 }, { x: 38.5, y: 43 }, { x: 42, y: 38 }, { x: 40.5, y: 38 }], fill: '#28402a', opacity: 1, soft: false },
-      ],
+      canvasAfter:
+        'Three dark green evergreen trees of different heights stand on the left half in front of the distant tree line, painted with a fan brush, with a gap on the right of them for a cabin, and soft yellow-green highlights on their right sides. Everything behind them is finished; no cabin, snowbanks or details yet.',
     },
     {
       title: 'The little cabin',
@@ -196,12 +184,8 @@ export const DEMO_LESSON: LessonContent = {
       watchOut: 'A roof that is level with the ground looks like a box; angle it.',
       happyAccident: 'A wobbly wall is an old cabin. Add a lean-to and it looks on purpose.',
       minutes: 8,
-      layers: [
-        { label: 'cabin back wall', points: [{ x: 27, y: 41 }, { x: 33, y: 41 }, { x: 33, y: 48 }, { x: 27, y: 48 }], fill: '#3a281a', opacity: 1, soft: false },
-        { label: 'cabin front wall', points: [{ x: 33, y: 42 }, { x: 40, y: 42 }, { x: 40, y: 48.5 }, { x: 33, y: 48.5 }], fill: '#4e3620', opacity: 1, soft: false },
-        { label: 'roof', points: [{ x: 26, y: 41.5 }, { x: 30, y: 37.5 }, { x: 41, y: 38 }, { x: 41, y: 42.3 }, { x: 33, y: 42 }], fill: '#e9edf1', opacity: 1, soft: false },
-        { label: 'window', points: [{ x: 35.5, y: 44 }, { x: 37.5, y: 44 }, { x: 37.5, y: 46 }, { x: 35.5, y: 46 }], fill: '#f0c85a', opacity: 1, soft: false },
-      ],
+      canvasAfter:
+        'A small dark log cabin with a snowy white roof and one warm yellow lit window sits to the right of the evergreens at the shoreline. Sky, mountains, mist, distant trees, far shore, evergreens and cabin are painted; the foreground snow is not yet.',
     },
     {
       title: 'Snowbanks and the near shore',
@@ -216,11 +200,8 @@ export const DEMO_LESSON: LessonContent = {
       watchOut: 'Flat horizontal snow reads as more water.',
       happyAccident: null,
       minutes: 6,
-      layers: [
-        { label: 'snow bank left', points: [{ x: 0, y: 47 }, { x: 45, y: 47 }, { x: 52, y: 52 }, { x: 40, y: 58 }, { x: 0, y: 60 }], fill: '#eef1f4', opacity: 1, soft: true },
-        { label: 'snow shadow', points: [{ x: 0, y: 55 }, { x: 40, y: 58 }, { x: 30, y: 63 }, { x: 0, y: 64 }], fill: '#c9d6e3', opacity: 0.8, soft: true },
-        { label: 'near shore', points: [{ x: 40, y: 75 }, { x: 60, y: 66 }, { x: 80, y: 63 }, { x: 100, y: 65 }, { x: 100, y: 75 }], fill: '#e8edf2', opacity: 1, soft: true },
-      ],
+      canvasAfter:
+        'Soft white snowbanks with blue shadows sweep from the base of the trees and cabin down toward the lake, and a snowy near shore curves around the bottom right corner so the viewer stands on the bank. Only small details and the signature are missing.',
     },
     {
       title: 'Bushes, trunks and footprints',
@@ -235,11 +216,8 @@ export const DEMO_LESSON: LessonContent = {
       watchOut: 'Too many details and the eye has nowhere to rest.',
       happyAccident: 'A blob from the liner is a stump under the snow.',
       minutes: 8,
-      layers: [
-        { label: 'bush', points: [{ x: 41, y: 47 }, { x: 45, y: 44.5 }, { x: 49, y: 45 }, { x: 52, y: 47.5 }, { x: 50, y: 50 }, { x: 44, y: 50.5 }, { x: 40, y: 49 }], fill: '#2d4529', opacity: 1, soft: false },
-        { label: 'bush highlight', points: [{ x: 44, y: 46 }, { x: 47, y: 44.8 }, { x: 50, y: 46 }, { x: 49, y: 48 }, { x: 45, y: 48 }], fill: '#6d8a3a', opacity: 0.9, soft: false },
-        { label: 'footprints', points: [{ x: 84, y: 73 }, { x: 70, y: 66 }, { x: 55, y: 58 }, { x: 44, y: 51 }, { x: 45, y: 50.5 }, { x: 56.5, y: 57.5 }, { x: 71.5, y: 65 }, { x: 85.5, y: 72 }], fill: '#a9bccb', opacity: 0.9, soft: false },
-      ],
+      canvasAfter:
+        'A dark green bush with yellow-green highlights sits at the foot of the trees, thin dark trunks show under the evergreens, and a trail of small footprints in the snow leads from the bottom right up to the cabin door. The painting is complete except for the signature.',
     },
     {
       title: 'Sign it, it is yours',
@@ -254,7 +232,8 @@ export const DEMO_LESSON: LessonContent = {
       watchOut: 'Signing into wet dark paint makes the red muddy; keep it light.',
       happyAccident: null,
       minutes: 3,
-      layers: [],
+      canvasAfter:
+        'The finished painting: winter cabin by a frozen lake with evergreens, misty snow-capped mountains and footprints in the snow, with a small red signature in the bottom left corner.',
     },
   ],
   closing:

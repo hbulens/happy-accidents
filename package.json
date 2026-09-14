@@ -9,7 +9,8 @@
     "serve": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "demo:images": "bun run scripts/generate-demo-images.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",

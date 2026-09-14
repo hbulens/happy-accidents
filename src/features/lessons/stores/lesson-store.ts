@@ -42,6 +42,6 @@ export const useLessonStore = create<LessonState>()(
       setStep: (id, step) => set((s) => ({ progress: { ...s.progress, [id]: step } })),
       updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
     }),
-    { name: 'happy-accidents/v1' },
+    { name: 'happy-accidents/v2' },
   ),
 )
